@@ -1,3 +1,12 @@
+//=====================================================
+// Project     : SPI (Serial Peripheral Interface)
+// File        : slave.sv
+// Author      : Brahma Ganesh Katrapalli
+// Created On  : 16-12-2025
+// Revision    : 1.0
+// Description : SPI Slave module implementation
+//=====================================================
+
 module spi_slave(
     input   logic SCL,
     input   logic resetn,
