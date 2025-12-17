@@ -2,87 +2,135 @@
 // Project     : SPI (Serial Peripheral Interface)
 // File        : slave.sv
 // Author      : Brahma Ganesh Katrapalli
-// Created On  : 16-12-2025
-// Revision    : 1.0
+// Created On  : 17-12-2025
+// Revision    : 2.0
 // Description : SPI Slave module implementation
 //=====================================================
 
-module spi_slave(
-    input   logic SCL,
-    input   logic resetn,
-    input   logic CS,
-    input   logic MOSI,
-    output  logic MISO,
-    input   logic [7:0] tx_data,
-    output  logic [7:0] rx_data
-);
-    typedef enum logic [1:0] {IDLE, LOAD, TRANSFER} state_t;
-    state_t state, next_state;
+module spi_slave #(
+    parameter CPOL = 0,
+    parameter CPHA = 0
+    )(
+        input   logic rst_n,
+        input   logic SCL,
+        input   logic CS_n,
+        input   logic MOSI,
+        input   logic [7:0] tx_data,
+        output  logic [7:0] rx_data,
+        output  logic MISO,
+        output  logic rx_valid
+    );
 
-    logic [7:0] rx_shift;
-    logic [7:0] tx_shift;
-    logic [3:0] bit_count;
+        typedef enum logic { IDLE, TRANSFER } state_t;
+        state_t state, next_state;
 
-    always_ff @(posedge SCL or negedge resetn) begin
-        if(!resetn) begin
-            rx_shift <= 0;
-            rx_data <= 0;
-            bit_count <= 0;
-            state   <= IDLE;
-        end
-         else if (CS) begin
-        state     <= IDLE;
-        bit_count <= 0;
-        end
-        else begin
-            state   <= next_state;
-            case(state)
-                IDLE        :  bit_count <= 0;
-                TRANSFER    :  begin
-                                    rx_shift <= {rx_shift[6:0], MOSI};
-                                    bit_count++;
-                                    if(bit_count == 7)
-                                        rx_data <= {rx_shift[6:0] ,MOSI};
-                            end
-            endcase
-        end
-    end
-    always_ff @(negedge SCL or negedge resetn) begin
-        if(!resetn) begin
-            MISO <= 1'bz;
-            tx_shift <= 0;
+        logic   [7:0] tx_shift;
+        logic   [7:0] rx_shift;
+        logic   [3:0] bit_count;
+
+        generate
+            if((CPOL == 0 && CPHA == 0) || (CPOL == 1 && CPHA == 1)) begin
+                always_ff @( posedge SCL or negedge rst_n) begin
+                    if(!rst_n) begin
+                        state       <= IDLE;
+                        bit_count   <= 3'd0;
+                        rx_shift    <= 8'd0;
+                        rx_valid    <= 1'b0;
+                        rx_data     <= 8'd0;
+                    end
+                    else begin
+                        rx_valid <= (state == TRANSFER && bit_count == 4'd8);
+                        state   <= next_state;
+                        case(state)
+                            IDLE        : begin
+                                            bit_count <= 0;
+                                            rx_valid <= 1'b0;
+                                         end
+                            TRANSFER    : begin
+                                            rx_shift <= {rx_shift[6:0], MOSI};
+                                            bit_count++;
+                                            if(bit_count == 4'd8) begin
+                                                rx_data <= {rx_shift[6:0],MOSI};
+                                            end
+                                          end
+                        endcase
+                    end
+                end
             end
-        else if(CS) begin
-             MISO <= 1'bz;
-             tx_shift <= 8'b0;
-        end
-        else begin
+            else begin
+                always_ff @( negedge SCL or negedge rst_n) begin
+                    if(!rst_n) begin
+                        state       <= IDLE;
+                        bit_count   <= 3'd0;
+                        rx_shift    <= 8'd0;
+                        rx_valid    <= 1'b0;
+                    end
+                    else begin
+                        rx_valid <= (state == TRANSFER && bit_count == 4'd8);
+                        state   <= next_state;
+                        case(state)
+                            IDLE        : bit_count <= 0;
+                            TRANSFER    : begin
+                                            rx_shift <= {rx_shift[6:0], MOSI};
+                                            bit_count++;
+                                            if(bit_count == 4'd8) begin
+                                                rx_data <= {rx_shift[6:0],MOSI};
+                                            end
+                                          end
+                        endcase
+                    end
+                end
+            end
+        endgenerate
+
+        generate
+             if((CPOL == 0 && CPHA == 0) || (CPOL == 1 && CPHA == 1)) begin
+                always_ff @(negedge SCL or negedge rst_n) begin
+                    if (!rst_n) begin
+                        tx_shift <= 8'd0;
+                        MISO     <= 1'b0;
+                    end
+                    else if (CS_n && state == IDLE) begin
+                            tx_shift <= tx_data;   
+                            MISO     <= 1'b0;
+                    end
+                    else if (!CS_n && state == TRANSFER) begin
+                            MISO     <= tx_shift[7];
+                            tx_shift <= {tx_shift[6:0], 1'b0};
+                    end
+                end
+             end
+             else begin
+                always_ff @(posedge SCL or negedge rst_n) begin
+                    if (!rst_n) begin
+                        tx_shift <= 8'd0;
+                        MISO     <= 1'b0;
+                    end
+                    else if (CS_n && state == IDLE) begin
+                            tx_shift <= tx_data;  
+                            MISO     <= 1'b0;
+                    end
+                    else if (!CS_n && state == TRANSFER) begin
+                            MISO     <= tx_shift[7];
+                            tx_shift <= {tx_shift[6:0], 1'b0};
+                    end
+                end
+             end
+        endgenerate
+
+        always_comb begin
+            next_state = state;
             case(state)
-                LOAD     :  begin
-                                tx_shift <= tx_data;
-                                MISO <= tx_data[7];
-                            end
-                TRANSFER :  begin
-                                MISO <= tx_shift[7];
-                                tx_shift <= {tx_shift[6:0], 1'b0};
-                            end
+                IDLE        : if(!CS_n) next_state = TRANSFER;
+                TRANSFER    : begin
+                                if(CS_n)
+                                    next_state = IDLE;
+                                else
+                                    if( bit_count == 4'd8 )
+                                        next_state = IDLE;
+                              end
+                default     : next_state = IDLE;
             endcase
         end
-    end
 
-    always_comb begin
-        next_state = state;
-        case(state)
-            IDLE    :   if(!CS) next_state = LOAD;
-            LOAD    :   next_state = TRANSFER;
-            TRANSFER :  begin
-                            if(CS)
-                                next_state = IDLE;
-                            else if(bit_count == 7) 
-                                next_state = IDLE;
-                        end
-            default :   next_state    = IDLE;
-        endcase
-    end
 endmodule
-
