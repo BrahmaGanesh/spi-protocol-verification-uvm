@@ -74,7 +74,6 @@ class spi_monitor extends uvm_monitor;
 
             if (vif.rx_valid) begin
                 tr.tx_data    = vif.tx_data;
-                tr.rx_data    = vif.rx_data;
                 tr.MOSI_data  = MOSI_shift;
                 tr.MISO_data  = MISO_shift;
                 tr.rx_valid   = vif.rx_valid;
