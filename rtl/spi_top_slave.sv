@@ -26,7 +26,7 @@ module spi_slave #(
 
         logic   [7:0] tx_shift;
         logic   [7:0] rx_shift;
-        logic   [3:0] bit_count;
+        logic   [2:0] bit_count;
 
         generate
             if((CPOL == 0 && CPHA == 0) || (CPOL == 1 && CPHA == 1)) begin
@@ -39,18 +39,18 @@ module spi_slave #(
                         rx_data     <= 8'd0;
                     end
                     else begin
-                        rx_valid <= (state == TRANSFER && bit_count == 4'd8);
                         state   <= next_state;
                         case(state)
                             IDLE        : begin
                                             bit_count <= 0;
-                                            rx_valid <= 1'b0;
+                                            if(!CS_n) rx_valid <= 1'b0;
                                          end
                             TRANSFER    : begin
                                             rx_shift <= {rx_shift[6:0], MOSI};
                                             bit_count++;
-                                            if(bit_count == 4'd8) begin
+                                            if(bit_count == 3'd7) begin
                                                 rx_data <= {rx_shift[6:0],MOSI};
+                                                rx_valid <= 1'b1;
                                             end
                                           end
                         endcase
@@ -66,15 +66,18 @@ module spi_slave #(
                         rx_valid    <= 1'b0;
                     end
                     else begin
-                        rx_valid <= (state == TRANSFER && bit_count == 4'd8);
                         state   <= next_state;
                         case(state)
-                            IDLE        : bit_count <= 0;
+                            IDLE        : begin
+                                            bit_count <= 0;
+                                            if(!CS_n) rx_valid <= 1'b0;
+                                          end
                             TRANSFER    : begin
                                             rx_shift <= {rx_shift[6:0], MOSI};
                                             bit_count++;
-                                            if(bit_count == 4'd8) begin
+                                            if(bit_count == 3'd7) begin
                                                 rx_data <= {rx_shift[6:0],MOSI};
+                                                rx_valid <= 1'b1;
                                             end
                                           end
                         endcase
@@ -92,10 +95,10 @@ module spi_slave #(
                     end
                     else if (CS_n && state == IDLE) begin
                             tx_shift <= tx_data;   
-                            MISO     <= 1'b0;
+                            MISO     <= tx_data[7];
                     end
                     else if (!CS_n && state == TRANSFER) begin
-                            MISO     <= tx_shift[7];
+                            MISO     <= tx_shift[6];
                             tx_shift <= {tx_shift[6:0], 1'b0};
                     end
                 end
@@ -108,10 +111,10 @@ module spi_slave #(
                     end
                     else if (CS_n && state == IDLE) begin
                             tx_shift <= tx_data;  
-                            MISO     <= 1'b0;
+                            MISO     <= tx_data[7];
                     end
                     else if (!CS_n && state == TRANSFER) begin
-                            MISO     <= tx_shift[7];
+                            MISO     <= tx_shift[6];
                             tx_shift <= {tx_shift[6:0], 1'b0};
                     end
                 end
@@ -126,7 +129,7 @@ module spi_slave #(
                                 if(CS_n)
                                     next_state = IDLE;
                                 else
-                                    if( bit_count == 4'd8 )
+                                    if( bit_count == 3'd7 )
                                         next_state = IDLE;
                               end
                 default     : next_state = IDLE;
