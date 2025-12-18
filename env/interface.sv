@@ -16,6 +16,7 @@ interface spi_interface;
     logic rx_valid;
     logic [7:0] tx_data;
     logic [7:0] rx_data;
+    logic [1:0] mode;
 
     modport master  ( output SCL, CS_n, MOSI, tx_data, 
                      input rx_data, MISO, rx_valid
