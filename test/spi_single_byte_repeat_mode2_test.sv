@@ -26,7 +26,7 @@ class spi_single_byte_repeat_mode2_sequence extends spi_sequence;
     endtask
 endclass
 
-class spi_single_byte_repeat_mode1_test extends base_test;
+class spi_single_byte_repeat_mode2_test extends base_test;
     `uvm_component_utils(spi_single_byte_repeat_mode2_test)
 
     spi_single_byte_repeat_mode2_sequence spi_m2;
