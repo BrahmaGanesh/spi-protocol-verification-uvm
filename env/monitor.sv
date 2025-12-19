@@ -33,22 +33,22 @@ class spi_monitor extends uvm_monitor;
 
     task mode0_mode3();
         while(bit_count < 8) begin
-            @(negedge vif.SCL);
-            MOSI_shift = {MOSI_shift, vif.MOSI};
-            MISO_shift = {MISO_shift, vif.MISO};
-            bit_count++;
-        end
-        @(posedge vif.SCL);
-    endtask
-
-    task mode1_mode2();
-        while(bit_count < 8) begin
             @(posedge vif.SCL);
             MOSI_shift = {MOSI_shift, vif.MOSI};
             MISO_shift = {MISO_shift, vif.MISO};
             bit_count++;
         end
         @(negedge vif.SCL);
+    endtask
+
+    task mode1_mode2();
+        while(bit_count < 8) begin
+            @(negedge vif.SCL);
+            MOSI_shift = {MOSI_shift, vif.MOSI};
+            MISO_shift = {MISO_shift, vif.MISO};
+            bit_count++;
+        end
+        @(posedge vif.SCL);
     endtask
 
     task run_phase(uvm_phase phase);
@@ -67,7 +67,7 @@ class spi_monitor extends uvm_monitor;
             if((vif.mode == 2'b00) || (vif.mode == 2'b11)) begin
                 mode0_mode3();
             end
-            else begin
+            else  if((vif.mode == 2'b01) || (vif.mode == 2'b10)) begin
                 mode1_mode2();
             end
      

@@ -62,7 +62,7 @@ class spi_driver extends uvm_driver#(spi_transaction);
                 if((tr.mode==2'b00 && vif.mode==2'b00) || (tr.mode==2'b11 && vif.mode==2'b11)) begin
                     mode0_mode3();
                 end
-                else begin
+                else  if((tr.mode==2'b01 && vif.mode==2'b01) || (tr.mode==2'b10 && vif.mode==2'b10)) begin
                     mode1_mode2();
                 end
             seq_item_port.item_done();
