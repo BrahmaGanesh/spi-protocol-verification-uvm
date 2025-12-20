@@ -52,7 +52,7 @@ class spi_driver extends uvm_driver#(spi_transaction);
             @(negedge vif.SCL);
             @(posedge vif.SCL);
         end
-
+        @(negedge vif.SCL);
         vif.CS_n <= 1;
     endtask
 

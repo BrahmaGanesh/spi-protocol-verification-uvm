@@ -71,8 +71,6 @@ class spi_monitor extends uvm_monitor;
                 mode1_mode2();
             end
      
-
-            if (vif.rx_valid) begin
                 tr.tx_data    = vif.tx_data;
                 tr.MOSI_data  = MOSI_shift;
                 tr.MISO_data  = MISO_shift;
@@ -83,10 +81,9 @@ class spi_monitor extends uvm_monitor;
                             tr.MOSI_data, tr.MISO_data, tr.rx_valid),
                 UVM_LOW)
 
-                mon_ap.write(tr);
-            end
-
             @(posedge vif.CS_n);
+            tr.CS_n     = vif.CS_n;
+            mon_ap.write(tr);
         end
     endtask
 endclass
