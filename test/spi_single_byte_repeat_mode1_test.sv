@@ -17,10 +17,18 @@ class spi_single_byte_repeat_mode1_sequence extends spi_sequence;
     endfunction
 
     task body();
-      repeat(10) begin
+     for(int i=0; i<10; i++)begin
         tr = spi_transaction::type_id::create("tr");
-        start_item(tr);
+        if(i==0)begin
+          tr.randomize() with {mode == 2'b01;tx_data==8'h00;};
+        end
+        else if(i==1)begin
+          tr.randomize() with {mode == 2'b01; tx_data==8'hFF;};
+        end
+        else begin
             tr.randomize() with {mode == 2'b01;};
+        end
+        start_item(tr);
         finish_item(tr);
       end
     endtask
